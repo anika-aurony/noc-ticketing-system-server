@@ -25,11 +25,11 @@ var emailSenderOptions = {
 const emailClient = nodemailer.createTransport(sgTransport(emailSenderOptions));
 
 function sendTicketEmail(newTicket) {
-    const { name, type, complain, status, assign, ETR, complainEmail } = newTicket;
+    const { clientMail, name, type, complain, status, assign, ETR, complainEmail } = newTicket;
 
     var email = {
         from: process.env.EMAIL_SENDER,
-        to: complainEmail,
+        to: [complainEmail, clientMail],
         subject: `New ticket created of ${name} is assign to ${assign} `,
         text: `New ticket created of ${name} is assign to ${assign} `,
         html: `
@@ -43,16 +43,46 @@ function sendTicketEmail(newTicket) {
 
     };
 
-    emailClient.sendMail(email, function(err, info){
-        if (err ){
-          console.log(err);
+    emailClient.sendMail(email, function (err, info) {
+        if (err) {
+            console.log(err);
         }
         else {
-          console.log('Message sent: ', info);
+            console.log('Message sent: ', info);
         }
     });
 
-    
+
+
+}
+
+function sendUpdateMail(updateComplain) {
+    const { name, complainEmail, clientMail, status, assign, ETR } = updateComplain;
+    console.log(updateComplain);
+    var email = {
+        from: process.env.EMAIL_SENDER,
+        to: [clientMail, complainEmail],
+        subject: `Ticket of ${name} has been updated `,
+        text: `Ticket of ${name} has been updated  `,
+        html: `
+            <div>
+                <p>Dear concern,</p>
+                <p>Your complain status is as below.</p>
+                <p>Current ETR is ${ETR}.</p>
+                <p>Status is ${status}</p>
+                <p>Assigned to ${assign}</p>
+            </div>`
+
+    };
+
+    emailClient.sendMail(email, function (err, info) {
+        if (err) {
+            console.log(err);
+        }
+        else {
+            console.log('Message sent: ', info);
+        }
+    });
 
 }
 
@@ -90,6 +120,8 @@ async function run() {
                 }
             }
             const result = await serviceCollection.updateOne(filter, updateDoc, options);
+            console.log(updateComplain)
+            sendUpdateMail(updateComplain);
             res.send(result);
         })
     }
