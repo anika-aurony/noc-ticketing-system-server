@@ -90,6 +90,8 @@ async function run() {
     try {
         await client.connect();
         const serviceCollection = client.db('noc_ticketing_system').collection('tickets');
+        
+        
         console.log('DB connected')
 
         app.get('/ticket', async (req, res) => {
@@ -99,13 +101,32 @@ async function run() {
             res.send(tickets)
         });
 
+ 
+
+        // app.get('/ticket', async(req, res) =>{
+        //     const clientMail = req.query.clientMail;
+        //     const query = {clientMail: clientMail};
+        //     console.log(query)
+        //     const bookings = await serviceCollection.find(query).toArray();
+        //     res.send(bookings);
+        //   })
+
+        
+
+        
+
         app.post('/ticket', async (req, res) => {
             const newTicket = req.body;
             const result = await serviceCollection.insertOne(newTicket);
+           
             sendTicketEmail(newTicket);
             res.send(result);
 
         });
+
+
+   
+
 
         app.put('/ticket/:id', async (req, res) => {
             const id = req.params.id;
