@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const nodemailer = require("nodemailer");
@@ -62,7 +63,7 @@ function sendUpdateMail(updateComplain) {
     var email = {
         from: process.env.EMAIL_SENDER,
         to: [clientMail, complainEmail],
-        subject: `Ticket of ${name} has been updated `,
+        subject: `UPDATE: Ticket of ${name} has been updated `,
         text: `Ticket of ${name} has been updated  `,
         html: `
             <div>
@@ -90,8 +91,9 @@ async function run() {
     try {
         await client.connect();
         const serviceCollection = client.db('noc_ticketing_system').collection('tickets');
-        
-        
+        const userCollection = client.db('noc_ticketing_system').collection('users');
+
+
         console.log('DB connected')
 
         app.get('/ticket', async (req, res) => {
@@ -101,31 +103,62 @@ async function run() {
             res.send(tickets)
         });
 
- 
 
-        // app.get('/ticket', async(req, res) =>{
-        //     const clientMail = req.query.clientMail;
-        //     const query = {clientMail: clientMail};
-        //     console.log(query)
-        //     const bookings = await serviceCollection.find(query).toArray();
-        //     res.send(bookings);
-        //   })
+        app.put('/user/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const filter = { email: email };
+            const updateDoc = {
+                $set: { role: 'admin' },
+            };
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        })
 
-        
 
-        
+
+        app.put('/user/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = req.body;
+            const filter = { email: email };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: user,
+            };
+            const result = await userCollection.updateOne(filter, updateDoc, options);
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+            res.send({ result, token });
+        });
+
+
+        app.get('/user', async (req, res) => {
+            const users = await userCollection.find().toArray();
+            res.send(users);
+        });
+
+
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = await userCollection.findOne({ email: email });
+            const isAdmin = user.role === 'admin';
+            res.send({ admin: isAdmin })
+        })
+
+
+
+
+
 
         app.post('/ticket', async (req, res) => {
             const newTicket = req.body;
             const result = await serviceCollection.insertOne(newTicket);
-           
+
             sendTicketEmail(newTicket);
             res.send(result);
 
         });
 
 
-   
+
 
 
         app.put('/ticket/:id', async (req, res) => {
@@ -153,13 +186,7 @@ async function run() {
 
 run().catch(console.dir);
 
-// app.post('/complain', (req, res) => {
-//     console.log('request', req.body)
-//     const complain = req.body;
-//     // complain.id = complain.lenght;
-//     // complains.push(complain);
-//     res.send();
-// })
+
 app.get('/', (req, res) => {
     res.send('Hello NOC ticket')
 });
