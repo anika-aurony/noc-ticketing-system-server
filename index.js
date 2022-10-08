@@ -170,7 +170,8 @@ async function run() {
                 $set: {
                     status: updateComplain.status,
                     assign: updateComplain.assign,
-                    ETR: updateComplain.ETR
+                    ETR: updateComplain.ETR,
+                    resolveDate: updateComplain.resolveDate
                 }
             }
             const result = await serviceCollection.updateOne(filter, updateDoc, options);
